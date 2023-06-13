@@ -1,0 +1,79 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "VpcId": {
+      "Type": "AWS::EC2::VPC::Id",
+      "Description": "Select the VPC where the ElastiCache cluster will be deployed."
+    },
+    "CacheSubnetIds": {
+      "Type": "List<AWS::EC2::Subnet::Id>",
+      "Description": "Select the subnets for the ElastiCache cluster."
+    },
+    "SecurityGroupName": {
+      "Type": "String",
+      "Description": "Enter a name for the security group."
+    }
+  },
+  "Resources": {
+    "CacheSubnetGroup": {
+      "Type": "AWS::ElastiCache::SubnetGroup",
+      "Properties": {
+        "Description": "Subnet group for ElastiCache cluster",
+        "CacheSubnetGroupName": "MyCacheSubnetGroup",
+        "SubnetIds": { "Ref": "CacheSubnetIds" }
+      }
+    },
+    "CacheSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Security group for ElastiCache cluster",
+        "GroupName": { "Ref": "SecurityGroupName" },
+        "VpcId": { "Ref": "VpcId" },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 6379,
+            "ToPort": 6379,
+            "CidrIp": "0.0.0.0/0"
+          }
+        ]
+      }
+    },
+    "CacheCluster": {
+      "Type": "AWS::ElastiCache::CacheCluster",
+      "Properties": {
+        "CacheNodeType": "cache.t2.micro",
+        "Engine": "redis",
+        "NumCacheNodes": 1,
+        "CacheSubnetGroupName": { "Ref": "CacheSubnetGroup" },
+        "VpcSecurityGroupIds": [{ "Fn::GetAtt": ["CacheSecurityGroup", "GroupId"] }],
+        "Port": 6379,
+        "AutoMinorVersionUpgrade": true,
+        "EngineVersion": "5.0.6",
+        "SnapshotRetentionLimit": 5,
+        "SnapshotWindow": "10:00-12:00"
+      },
+      "DependsOn": "CacheSecurityGroup"
+    },
+    "CacheParameterGroup": {
+      "Type": "AWS::ElastiCache::ParameterGroup",
+      "Properties": {
+        "CacheParameterGroupFamily": "redis5.0",
+        "Description": "Redis 5.0 parameter group",
+        "Properties": {
+          "notify-keyspace-events": "KEA"
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "CacheEndpoint": {
+      "Description": "ElastiCache cluster endpoint",
+      "Value": { "Fn::GetAtt": ["CacheCluster", "RedisEndpoint.Address"] }
+    },
+    "SecurityGroupId": {
+      "Description": "The ID of the security group",
+      "Value": { "Fn::GetAtt": ["CacheSecurityGroup", "GroupId"] }
+    }
+  }
+}
