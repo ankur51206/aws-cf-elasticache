@@ -19,7 +19,7 @@
       "Type": "AWS::ElastiCache::SubnetGroup",
       "Properties": {
         "Description": "Subnet group for ElastiCache cluster",
-        "CacheSubnetGroupName": "elasticacheSubnetGroup",
+        "CacheSubnetGroupName": "MyCacheSubnetGroup",
         "SubnetIds": { "Ref": "CacheSubnetIds" }
       }
     },
@@ -40,18 +40,20 @@
       }
     },
     "CacheCluster": {
-      "Type": "AWS::ElastiCache::CacheCluster",
+      "Type": "AWS::ElastiCache::ReplicationGroup",
       "Properties": {
+        "ReplicationGroupDescription": "MyReplicationGroup",
         "CacheNodeType": "cache.t2.micro",
         "Engine": "redis",
         "EngineVersion": "6.0",
-        "NumCacheNodes": 2,
+        "NumNodeGroups": 1,
+        "ReplicasPerNodeGroup": 2,
         "CacheSubnetGroupName": { "Ref": "CacheSubnetGroup" },
-        "VpcSecurityGroupIds": [
+        "SecurityGroupIds": [
           { "Fn::GetAtt": ["CacheSecurityGroup", "GroupId"] }
         ],
         "Port": 6379,
-        "AutoMinorVersionUpgrade": true,
+        "AutomaticFailoverEnabled": false,
         "SnapshotRetentionLimit": 5,
         "SnapshotWindow": "10:00-12:00"
       },
@@ -71,7 +73,7 @@
   "Outputs": {
     "CacheEndpoint": {
       "Description": "ElastiCache cluster endpoint",
-      "Value": { "Fn::GetAtt": ["CacheCluster", "RedisEndpoint.Address"] }
+      "Value": { "Fn::GetAtt": ["CacheCluster", "PrimaryEndPoint.Address"] }
     },
     "SecurityGroupId": {
       "Description": "The ID of the security group",
